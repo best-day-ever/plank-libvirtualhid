@@ -34,6 +34,12 @@ if(LIBVIRTUALHID_USES_THREADS)
       PRIVATE
       PkgConfig::LIBEVDEV)
     if(LIBVIRTUALHID_ENABLE_XTEST AND X11_FOUND AND X11_XTest_FOUND)
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            find_package(PkgConfig REQUIRED)
+            pkg_check_modules(X11_SCROLL REQUIRED IMPORTED_TARGET x11-xcb xcb-xinput xcb-xtest)
+            target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/platform/linux/x11_scroll_baseline.cpp")
+            target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::X11_SCROLL)
+        endif()
         set(LIBVIRTUALHID_USES_XTEST ON PARENT_SCOPE)
         target_compile_definitions(${PROJECT_NAME}
           PRIVATE

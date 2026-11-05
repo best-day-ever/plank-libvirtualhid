@@ -170,6 +170,10 @@ if(LIBVIRTUALHID_INSTALL)
     if(LIBVIRTUALHID_USES_XTEST)
         string(APPEND LIBVIRTUALHID_CONFIG_DEPENDENCIES
           "find_dependency(X11 COMPONENTS Xtst)\n")
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            string(APPEND LIBVIRTUALHID_CONFIG_DEPENDENCIES
+              "pkg_check_modules(X11_SCROLL REQUIRED IMPORTED_TARGET x11-xcb xcb-xinput xcb-xtest)\n")
+        endif()
     endif()
 
     install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/LICENSES/MIT.md"
