@@ -52,6 +52,9 @@
 
 #if defined(LIBVIRTUALHID_HAVE_XTEST)
   #include <X11/extensions/XTest.h>
+  #if defined(__linux__)
+    #include "x11_scroll_baseline.hpp"
+  #endif
   #include <X11/keysym.h>
   #include <X11/Xlib.h>
   #include <X11/Xutil.h>
@@ -892,6 +895,16 @@ namespace lvh::detail {
 
       std::vector<DeviceNode> uinput_device_nodes(const std::string &device_name) const;
 
+      /** @brief Return only the evdev node created by this uinput handle. */
+      std::string owned_event_node() const {
+        if (uinput_device_) {
+          const auto *node = libevdev_uinput_get_devnode(uinput_device_);
+          if (node) return node;
+        }
+        return {};
+      }
+
+
       OperationStatus emit_event(std::uint16_t type, std::uint16_t code, std::int32_t value) {
         std::lock_guard lock {write_mutex_};
         return emit_event_locked(type, code, value);
@@ -1667,7 +1680,20 @@ namespace lvh::detail {
         return OperationStatus::success();
       }
 
+      /** @brief Prime only the owned mouse, preserving precision and pointer position. */
+      void prime_scroll(std::int32_t distance) {
+#if defined(LIBVIRTUALHID_HAVE_XTEST) && defined(__linux__)
+        if (distance != 0 && absolute_display_) {
+          const auto node = owned_event_node();
+          if (!node.empty()) static_cast<void>(prime_x11_scroll(absolute_display_, {node}));
+        }
+#else
+        static_cast<void>(distance);
+#endif
+      }
+
       OperationStatus submit_vertical_scroll(std::int32_t distance) {
+        prime_scroll(distance);
 #if defined(REL_WHEEL_HI_RES)
         const auto accumulated_distance = vertical_scroll_remainder_ + distance;
         // Linux high-resolution wheels must also report each accumulated
@@ -1691,6 +1717,7 @@ namespace lvh::detail {
       }
 
       OperationStatus submit_horizontal_scroll(std::int32_t distance) {
+        prime_scroll(distance);
 #if defined(REL_HWHEEL_HI_RES)
         const auto accumulated_distance = horizontal_scroll_remainder_ + distance;
         const auto legacy_steps = accumulated_distance / high_resolution_scroll_units_per_detent;

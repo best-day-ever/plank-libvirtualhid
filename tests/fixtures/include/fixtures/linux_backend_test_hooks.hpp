@@ -1293,4 +1293,6 @@ namespace lvh::detail::test {
    */
   int linux_xtest_mouse_button(MouseButton button);
 
+  /** @brief Prime calls (owned node and prior write count), excluding zero and closed input. */
+  std::vector<std::pair<std::string, int>> linux_scroll_baseline_order();
 }  // namespace lvh::detail::test

@@ -536,6 +536,24 @@ extern "C" void lvh_linux_test_libevdev_uinput_destroy(libevdev_uinput *raw_uinp
   destroy_real_libevdev_uinput(raw_uinput_handle);
 }
 
+extern "C" const char *lvh_linux_test_libevdev_uinput_get_devnode(const libevdev_uinput *device) {
+  if (lvh::detail::test::active_test_syscalls() && lvh::detail::test::active_test_syscalls()->override_libevdev) {
+    return "/dev/input/event-test-owned";
+  }
+  return ::libevdev_uinput_get_devnode(device);
+}
+
+#if defined(LIBVIRTUALHID_HAVE_XTEST)
+namespace lvh::detail {
+  std::vector<std::pair<std::string, int>> scroll_primes;
+  bool test_prime_x11_scroll(Display *, const std::vector<std::string> &nodes) {
+    scroll_primes.emplace_back(nodes.at(0), test::active_test_syscalls()->write_call_count.load());
+    return true;
+  }
+}
+#define prime_x11_scroll test_prime_x11_scroll
+#endif
+#define libevdev_uinput_get_devnode lvh_linux_test_libevdev_uinput_get_devnode
   #define access lvh_linux_test_access
   #define ioctl lvh_linux_test_ioctl
   #define open lvh_linux_test_open
@@ -574,6 +592,10 @@ extern "C" void lvh_linux_test_libevdev_uinput_destroy(libevdev_uinput *raw_uinp
   #define create_platform_backend create_platform_backend_for_linux_backend_test_hooks
   #include "../../src/platform/linux/uhid_backend.cpp"
   #undef create_platform_backend
+  #undef libevdev_uinput_get_devnode
+  #if defined(LIBVIRTUALHID_HAVE_XTEST)
+    #undef prime_x11_scroll
+  #endif
 
   #if defined(LIBVIRTUALHID_HAVE_XTEST)
     #undef XTestQueryExtension
@@ -1324,6 +1346,30 @@ namespace lvh::detail::test {
     auto records = read_input_events_until_eof(descriptors[0]);
     static_cast<void>(::close(descriptors[0]));
     return {std::move(status), std::move(records)};
+  }
+
+  std::vector<std::pair<std::string, int>> linux_scroll_baseline_order() {
+#if defined(LIBVIRTUALHID_HAVE_XTEST)
+    LinuxTestSyscalls syscalls;
+    syscalls.override_write = true;
+    syscalls.override_ioctl = true;
+    syscalls.override_libevdev = true;
+    ScopedLinuxTestSyscalls scoped_syscalls {syscalls};
+    CreateMouseOptions options;
+    options.profile = profiles::mouse();
+    UinputMouse mouse {open_test_fd()};
+    if (!mouse.create(1, options).ok()) return {};
+    scroll_primes.clear();
+    syscalls.write_call_count = 0;
+    static_cast<void>(mouse.submit({.kind = MouseEventKind::vertical_scroll, .high_resolution_scroll = 120}));
+    static_cast<void>(mouse.submit({.kind = MouseEventKind::horizontal_scroll, .high_resolution_scroll = -30}));
+    static_cast<void>(mouse.submit({.kind = MouseEventKind::vertical_scroll, .high_resolution_scroll = 0}));
+    static_cast<void>(mouse.close());
+    static_cast<void>(mouse.submit({.kind = MouseEventKind::vertical_scroll, .high_resolution_scroll = 120}));
+    return scroll_primes;
+#else
+    return {};
+#endif
   }
 
   LinuxMouseTransportResult linux_uinput_mouse_transport_sequence() {

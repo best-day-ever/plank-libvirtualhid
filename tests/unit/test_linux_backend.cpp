@@ -1450,3 +1450,14 @@ TEST_F(LinuxBackendTest, PlatformRuntimeReportsUnavailableDeviceCreationWhenNode
     EXPECT_EQ(mouse.status.code(), lvh::ErrorCode::backend_unavailable);
   }
 }
+
+#if defined(LIBVIRTUALHID_HAVE_XTEST)
+TEST_F(LinuxBackendTest, ScrollPrimesOwnedDeviceBeforeBothAxesWithoutPrimingZeroOrClosedInput) {
+  const auto calls = lvh::detail::test::linux_scroll_baseline_order();
+  ASSERT_EQ(calls.size(), 2U);
+  EXPECT_EQ(calls[0].first, "/dev/input/event-test-owned");
+  EXPECT_EQ(calls[1].first, calls[0].first);
+  EXPECT_EQ(calls[0].second, 0);
+  EXPECT_EQ(calls[1].second, 3); // legacy + high-resolution + SYN_REPORT
+}
+#endif
