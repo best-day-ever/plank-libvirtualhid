@@ -151,6 +151,8 @@ namespace lvh::detail::test {
       std::atomic_int x_keycode_call_count = 0;
       int fail_x_keycode_call = -1;
       std::atomic_size_t xtest_motion_count = 0;
+      bool owned_motion_result = false;
+      std::size_t owned_motion_count = 0;
       std::vector<std::pair<int, int>> xtest_motion_positions;
       bool override_libevdev = false;
       bool libevdev_new_returns_null = false;
@@ -543,17 +545,30 @@ extern "C" const char *lvh_linux_test_libevdev_uinput_get_devnode(const libevdev
   return ::libevdev_uinput_get_devnode(device);
 }
 
-#if defined(LIBVIRTUALHID_HAVE_XTEST)
+  #if defined(LIBVIRTUALHID_HAVE_XTEST)
 namespace lvh::detail {
+  bool test_move_x11_pointer(Display *, const std::vector<std::string> &nodes, int x, int y) {
+    auto *syscalls = test::active_test_syscalls();
+    if (!syscalls || !syscalls->owned_motion_result || nodes != std::vector<std::string> {"/dev/input/event-test-owned"}) {
+      return false;
+    }
+    ++syscalls->owned_motion_count;
+    syscalls->xtest_motion_positions.emplace_back(x, y);
+    return true;
+  }
+
   std::vector<std::pair<std::string, int>> scroll_primes;
+
   bool test_prime_x11_scroll(Display *, const std::vector<std::string> &nodes) {
     scroll_primes.emplace_back(nodes.at(0), test::active_test_syscalls()->write_call_count.load());
     return true;
   }
-}
-#define prime_x11_scroll test_prime_x11_scroll
-#endif
-#define libevdev_uinput_get_devnode lvh_linux_test_libevdev_uinput_get_devnode
+}  // namespace lvh::detail
+
+    #define prime_x11_scroll test_prime_x11_scroll
+    #define move_x11_pointer test_move_x11_pointer
+  #endif
+  #define libevdev_uinput_get_devnode lvh_linux_test_libevdev_uinput_get_devnode
   #define access lvh_linux_test_access
   #define ioctl lvh_linux_test_ioctl
   #define open lvh_linux_test_open
@@ -595,6 +610,7 @@ namespace lvh::detail {
   #undef libevdev_uinput_get_devnode
   #if defined(LIBVIRTUALHID_HAVE_XTEST)
     #undef prime_x11_scroll
+    #undef move_x11_pointer
   #endif
 
   #if defined(LIBVIRTUALHID_HAVE_XTEST)
@@ -1349,7 +1365,7 @@ namespace lvh::detail::test {
   }
 
   std::vector<std::pair<std::string, int>> linux_scroll_baseline_order() {
-#if defined(LIBVIRTUALHID_HAVE_XTEST)
+  #if defined(LIBVIRTUALHID_HAVE_XTEST)
     LinuxTestSyscalls syscalls;
     syscalls.override_write = true;
     syscalls.override_ioctl = true;
@@ -1358,7 +1374,9 @@ namespace lvh::detail::test {
     CreateMouseOptions options;
     options.profile = profiles::mouse();
     UinputMouse mouse {open_test_fd()};
-    if (!mouse.create(1, options).ok()) return {};
+    if (!mouse.create(1, options).ok()) {
+      return {};
+    }
     scroll_primes.clear();
     syscalls.write_call_count = 0;
     static_cast<void>(mouse.submit({.kind = MouseEventKind::vertical_scroll, .high_resolution_scroll = 120}));
@@ -1367,17 +1385,18 @@ namespace lvh::detail::test {
     static_cast<void>(mouse.close());
     static_cast<void>(mouse.submit({.kind = MouseEventKind::vertical_scroll, .high_resolution_scroll = 120}));
     return scroll_primes;
-#else
+  #else
     return {};
-#endif
+  #endif
   }
 
-  LinuxMouseTransportResult linux_uinput_mouse_transport_sequence() {
-#if defined(LIBVIRTUALHID_HAVE_XTEST)
+  LinuxMouseTransportResult linux_uinput_mouse_transport_sequence(bool owned) {
+  #if defined(LIBVIRTUALHID_HAVE_XTEST)
     LinuxTestSyscalls syscalls;
     syscalls.override_write = true;
     syscalls.override_ioctl = true;
     syscalls.override_libevdev = true;
+    syscalls.owned_motion_result = owned;
     ScopedLinuxTestSyscalls scoped_syscalls {syscalls};
 
     CreateMouseOptions options;
@@ -1414,13 +1433,14 @@ namespace lvh::detail::test {
       .status = std::move(status),
       .uinput_write_count = static_cast<std::size_t>(syscalls.write_call_count.load()),
       .xtest_motion_count = syscalls.xtest_motion_count.load(),
+      .owned_motion_count = syscalls.owned_motion_count,
       .xtest_motion_positions = std::move(syscalls.xtest_motion_positions),
     };
-#else
+  #else
     return {
       .status = OperationStatus::failure(ErrorCode::backend_unavailable, "XTest fallback is not enabled"),
     };
-#endif
+  #endif
   }
 
   LinuxInputSubmissionResult linux_uinput_touchscreen_contact_pipe(const TouchContact &contact) {

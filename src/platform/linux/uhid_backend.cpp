@@ -899,11 +899,12 @@ namespace lvh::detail {
       std::string owned_event_node() const {
         if (uinput_device_) {
           const auto *node = libevdev_uinput_get_devnode(uinput_device_);
-          if (node) return node;
+          if (node) {
+            return node;
+          }
         }
         return {};
       }
-
 
       OperationStatus emit_event(std::uint16_t type, std::uint16_t code, std::int32_t value) {
         std::lock_guard lock {write_mutex_};
@@ -1656,6 +1657,12 @@ namespace lvh::detail {
           const auto screen = DefaultScreen(absolute_display_);
           const auto x = xtest_viewport_coordinate(event.x, event.width);
           const auto y = xtest_viewport_coordinate(event.y, event.height);
+  #if defined(__linux__)
+          const auto node = owned_event_node();
+          if (!node.empty() && move_x11_pointer(absolute_display_, {node}, x, y)) {
+            return OperationStatus::success();
+          }
+  #endif
           XTestFakeMotionEvent(absolute_display_, screen, x, y, CurrentTime);
           XFlush(absolute_display_);
           return OperationStatus::success();
@@ -1685,7 +1692,9 @@ namespace lvh::detail {
 #if defined(LIBVIRTUALHID_HAVE_XTEST) && defined(__linux__)
         if (distance != 0 && absolute_display_) {
           const auto node = owned_event_node();
-          if (!node.empty()) static_cast<void>(prime_x11_scroll(absolute_display_, {node}));
+          if (!node.empty()) {
+            static_cast<void>(prime_x11_scroll(absolute_display_, {node}));
+          }
         }
 #else
         static_cast<void>(distance);

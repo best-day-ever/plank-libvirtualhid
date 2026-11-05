@@ -71,11 +71,12 @@ namespace lvh::detail::test {
      */
     std::size_t xtest_motion_count = 0;
 
+    std::size_t owned_motion_count = 0;  ///< Motions delivered on the owned XInput pointer.
+
     /**
      * @brief Absolute viewport coordinates sent through XTest.
      */
     std::vector<std::pair<int, int>> xtest_motion_positions;
-
   };
 
   /**
@@ -805,7 +806,7 @@ namespace lvh::detail::test {
    *
    * @return Captured transport calls and overall status.
    */
-  LinuxMouseTransportResult linux_uinput_mouse_transport_sequence();
+  LinuxMouseTransportResult linux_uinput_mouse_transport_sequence(bool owned = false);
 
   /**
    * @brief Place and release a contact through a pipe-backed uinput touchscreen.

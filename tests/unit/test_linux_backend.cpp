@@ -1458,6 +1458,17 @@ TEST_F(LinuxBackendTest, ScrollPrimesOwnedDeviceBeforeBothAxesWithoutPrimingZero
   EXPECT_EQ(calls[0].first, "/dev/input/event-test-owned");
   EXPECT_EQ(calls[1].first, calls[0].first);
   EXPECT_EQ(calls[0].second, 0);
-  EXPECT_EQ(calls[1].second, 3); // legacy + high-resolution + SYN_REPORT
+  EXPECT_EQ(calls[1].second, 3);  // legacy + high-resolution + SYN_REPORT
+}
+#endif
+
+#if defined(LIBVIRTUALHID_HAVE_XTEST)
+TEST_F(LinuxBackendTest, OwnedXInputMotionPreservesAbsoluteDragCoordinatesWithoutCoreSourceSwitch) {
+  const auto result = lvh::detail::test::linux_uinput_mouse_transport_sequence(true);
+  ASSERT_TRUE(result.status.ok()) << result.status.message();
+  EXPECT_EQ(result.owned_motion_count, 3U);
+  EXPECT_EQ(result.xtest_motion_count, 0U);
+  EXPECT_EQ(result.xtest_motion_positions, (std::vector<std::pair<int, int>> {{50, 50}, {60, 55}, {70, 60}}));
+  EXPECT_GT(result.uinput_write_count, 0U);
 }
 #endif
