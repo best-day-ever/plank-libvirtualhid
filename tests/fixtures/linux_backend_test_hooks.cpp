@@ -538,7 +538,7 @@ extern "C" void lvh_linux_test_libevdev_uinput_destroy(libevdev_uinput *raw_uinp
   destroy_real_libevdev_uinput(raw_uinput_handle);
 }
 
-extern "C" const char *lvh_linux_test_libevdev_uinput_get_devnode(const libevdev_uinput *device) {
+extern "C" const char *lvh_linux_test_libevdev_uinput_get_devnode(libevdev_uinput *device) {
   if (lvh::detail::test::active_test_syscalls() && lvh::detail::test::active_test_syscalls()->override_libevdev) {
     return "/dev/input/event-test-owned";
   }
