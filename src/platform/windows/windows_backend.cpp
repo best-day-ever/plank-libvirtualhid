@@ -1378,6 +1378,8 @@ namespace lvh::detail {
         switch (event.kind) {
           using enum MouseEventKind;
 
+          case relative_pixel_motion:
+            return OperationStatus::failure(unsupported_profile, "Windows pixel-relative mouse movement is not implemented");
           case relative_motion:
             mouse.dwFlags = MOUSEEVENTF_MOVE;
             mouse.dx = event.x;

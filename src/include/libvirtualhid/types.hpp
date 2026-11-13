@@ -805,6 +805,7 @@ namespace lvh {
     button,  ///< Mouse button transition.
     vertical_scroll,  ///< High-resolution vertical scroll event.
     horizontal_scroll,  ///< High-resolution horizontal scroll event.
+    relative_pixel_motion,  ///< Unaccelerated desktop-pixel offsets; requires backend support.
   };
 
   /**

@@ -851,6 +851,7 @@ namespace lvh::detail {
       CreateMouseOptions mouse_options;
       mouse_options.profile = profiles::mouse();
       if (auto mouse = backend.create_mouse(11, mouse_options); mouse) {
+        result.mouse.pixel_relative_status = mouse.mouse->submit({.kind = relative_pixel_motion, .x = 1, .y = -1});
         result.mouse.relative_status = mouse.mouse->submit({.kind = relative_motion, .x = 11, .y = -12});
         result.mouse.absolute_status =
           mouse.mouse->submit({.kind = absolute_motion, .x = 50, .y = 25, .width = 100, .height = 50});
@@ -882,6 +883,7 @@ namespace lvh::detail {
         result.mouse.failure_status = mouse.mouse->submit({.kind = relative_motion, .x = 1, .y = 1});
         fake_send_input.forced_sent_count.reset();
       } else {
+        result.mouse.pixel_relative_status = mouse.status;
         result.mouse.relative_status = mouse.status;
       }
 

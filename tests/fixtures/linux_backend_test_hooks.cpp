@@ -153,6 +153,7 @@ namespace lvh::detail::test {
       std::atomic_size_t xtest_motion_count = 0;
       bool owned_motion_result = false;
       std::size_t owned_motion_count = 0;
+      std::vector<std::pair<int, int>> pixel_motion_offsets;
       std::vector<std::pair<int, int>> xtest_motion_positions;
       bool override_libevdev = false;
       bool libevdev_new_returns_null = false;
@@ -557,6 +558,15 @@ namespace lvh::detail {
     return true;
   }
 
+  bool test_move_x11_pointer_pixels(Display *, const std::vector<std::string> &nodes, int x, int y) {
+    auto *syscalls = test::active_test_syscalls();
+    if (!syscalls || !syscalls->owned_motion_result || nodes != std::vector<std::string> {"/dev/input/event-test-owned"}) {
+      return false;
+    }
+    syscalls->pixel_motion_offsets.emplace_back(x, y);
+    return true;
+  }
+
   std::vector<std::pair<std::string, int>> scroll_primes;
 
   bool test_prime_x11_scroll(Display *, const std::vector<std::string> &nodes) {
@@ -567,6 +577,7 @@ namespace lvh::detail {
 
     #define prime_x11_scroll test_prime_x11_scroll
     #define move_x11_pointer test_move_x11_pointer
+    #define move_x11_pointer_pixels test_move_x11_pointer_pixels
   #endif
   #define libevdev_uinput_get_devnode lvh_linux_test_libevdev_uinput_get_devnode
   #define access lvh_linux_test_access
@@ -611,6 +622,7 @@ namespace lvh::detail {
   #if defined(LIBVIRTUALHID_HAVE_XTEST)
     #undef prime_x11_scroll
     #undef move_x11_pointer
+    #undef move_x11_pointer_pixels
   #endif
 
   #if defined(LIBVIRTUALHID_HAVE_XTEST)
@@ -1440,6 +1452,38 @@ namespace lvh::detail::test {
     return {
       .status = OperationStatus::failure(ErrorCode::backend_unavailable, "XTest fallback is not enabled"),
     };
+  #endif
+  }
+
+  LinuxMouseTransportResult linux_uinput_pixel_mouse_transport_sequence(bool owned) {
+  #if defined(LIBVIRTUALHID_HAVE_XTEST)
+    LinuxTestSyscalls syscalls;
+    syscalls.override_write = true;
+    syscalls.override_ioctl = true;
+    syscalls.override_libevdev = true;
+    syscalls.owned_motion_result = owned;
+    ScopedLinuxTestSyscalls scoped_syscalls {syscalls};
+    CreateMouseOptions options;
+    options.profile = profiles::mouse();
+    UinputMouse mouse {open_test_fd()};
+    auto status = mouse.create(1, options);
+    syscalls.write_call_count = 0;
+    for (const auto &[x, y] : std::vector<std::pair<int, int>> {{17, -23}, {-31, 11}, {0, 0}}) {
+      if (!status.ok()) {
+        break;
+      }
+      status = mouse.submit({.kind = MouseEventKind::relative_pixel_motion, .x = x, .y = y});
+    }
+    return {
+      .status = std::move(status),
+      .uinput_write_count = static_cast<std::size_t>(syscalls.write_call_count.load()),
+      .xtest_motion_count = syscalls.xtest_motion_count.load(),
+      .owned_motion_count = syscalls.owned_motion_count,
+      .pixel_motion_offsets = std::move(syscalls.pixel_motion_offsets),
+    };
+  #else
+    (void) owned;
+    return {.status = OperationStatus::failure(ErrorCode::unsupported_profile, "XTest fallback is not enabled")};
   #endif
   }
 
@@ -2693,6 +2737,18 @@ namespace lvh::detail::test {
     return mouse.submit({.kind = horizontal_scroll, .high_resolution_scroll = -120});
   #else
     return OperationStatus::failure(ErrorCode::backend_unavailable, "XTest fallback is not enabled");
+  #endif
+  }
+
+  OperationStatus linux_xtest_pixel_mouse_submit() {
+  #if defined(LIBVIRTUALHID_HAVE_XTEST)
+    XTestMouse mouse;
+    if (const auto status = mouse.create(); !status.ok()) {
+      return status;
+    }
+    return mouse.submit({.kind = MouseEventKind::relative_pixel_motion, .x = 1, .y = -1});
+  #else
+    return OperationStatus::failure(ErrorCode::unsupported_profile, "owned XInput pointer is unavailable");
   #endif
   }
 

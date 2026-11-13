@@ -601,6 +601,17 @@ TEST_F(LinuxBackendTest, HandlesUinputMouseInvalidFileDescriptorPaths) {
   EXPECT_EQ(lvh::detail::test::linux_uinput_mouse_submit_after_close().code(), lvh::ErrorCode::device_closed);
 }
 
+TEST_F(LinuxBackendTest, PixelRelativeMouseNeverFallsBackToEvdevOrCoreXTest) {
+  const auto result = lvh::detail::test::linux_uinput_mouse_submit_pipe({.kind = lvh::MouseEventKind::relative_pixel_motion, .x = 7, .y = -9});
+#if defined(LIBVIRTUALHID_HAVE_XTEST)
+  EXPECT_EQ(result.status.code(), lvh::ErrorCode::backend_unavailable);
+#else
+  EXPECT_EQ(result.status.code(), lvh::ErrorCode::unsupported_profile);
+#endif
+  EXPECT_TRUE(result.events.empty());
+  EXPECT_EQ(lvh::detail::test::linux_xtest_pixel_mouse_submit().code(), lvh::ErrorCode::unsupported_profile);
+}
+
 TEST_F(LinuxBackendTest, PipeBackedUinputMouseEmitsEvents) {
   lvh::MouseEvent event;
   event.kind = lvh::MouseEventKind::relative_motion;
@@ -1463,6 +1474,21 @@ TEST_F(LinuxBackendTest, ScrollPrimesOwnedDeviceBeforeBothAxesWithoutPrimingZero
 #endif
 
 #if defined(LIBVIRTUALHID_HAVE_XTEST)
+TEST_F(LinuxBackendTest, PixelRelativeMouseUsesOwnedXInputWithoutUinputOrCoreFallback) {
+  const auto result = lvh::detail::test::linux_uinput_pixel_mouse_transport_sequence(true);
+  ASSERT_TRUE(result.status.ok()) << result.status.message();
+  EXPECT_EQ(result.pixel_motion_offsets, (std::vector<std::pair<int, int>> {{17, -23}, {-31, 11}, {0, 0}}));
+  EXPECT_EQ(result.uinput_write_count, 0U);
+  EXPECT_EQ(result.xtest_motion_count, 0U);
+  EXPECT_EQ(result.owned_motion_count, 0U);
+
+  const auto unavailable = lvh::detail::test::linux_uinput_pixel_mouse_transport_sequence(false);
+  EXPECT_EQ(unavailable.status.code(), lvh::ErrorCode::backend_unavailable);
+  EXPECT_TRUE(unavailable.pixel_motion_offsets.empty());
+  EXPECT_EQ(unavailable.uinput_write_count, 0U);
+  EXPECT_EQ(unavailable.xtest_motion_count, 0U);
+}
+
 TEST_F(LinuxBackendTest, OwnedXInputMotionPreservesAbsoluteDragCoordinatesWithoutCoreSourceSwitch) {
   const auto result = lvh::detail::test::linux_uinput_mouse_transport_sequence(true);
   ASSERT_TRUE(result.status.ok()) << result.status.message();

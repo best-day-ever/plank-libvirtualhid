@@ -106,6 +106,7 @@ namespace lvh::detail::test {
 
   struct WindowsMouseSendInputResult {
     OperationStatus relative_status;
+    OperationStatus pixel_relative_status;
     OperationStatus absolute_status;
     OperationStatus degenerate_absolute_status;
     OperationStatus left_button_status;

@@ -579,6 +579,8 @@ namespace lvh::detail {
         }
 
         switch (event.kind) {
+          case relative_pixel_motion:
+            return OperationStatus::failure(ErrorCode::unsupported_profile, "macOS pixel-relative mouse movement is not implemented");
           case relative_motion:
             return submit_relative_motion(event.x, event.y);
           case absolute_motion:

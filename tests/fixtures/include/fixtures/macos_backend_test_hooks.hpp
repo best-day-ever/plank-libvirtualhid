@@ -32,6 +32,7 @@ namespace lvh::detail::test {
     OperationStatus keyboard_submit_after_close_status;  ///< Keyboard submit status after close.
     OperationStatus keyboard_invalid_profile_status;  ///< Keyboard creation status for a non-keyboard profile.
     OperationStatus mouse_create_status;  ///< Mouse creation status.
+    OperationStatus mouse_pixel_motion_status;  ///< Unsupported pixel-relative movement status.
     OperationStatus mouse_close_status;  ///< Mouse close status.
     OperationStatus mouse_submit_after_close_status;  ///< Mouse submit status after close.
     OperationStatus mouse_invalid_profile_status;  ///< Mouse creation status for a non-mouse profile.

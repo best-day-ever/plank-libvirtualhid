@@ -183,6 +183,7 @@ TEST_F(WindowsBackendTest, SendInputDevicesTranslateKeyboardMouseFailuresAndUnsu
   EXPECT_EQ(result.keyboard.normalized_input.scan_code, 30U);
   EXPECT_EQ(result.keyboard.normalized_input.key_flags, KEYEVENTF_SCANCODE);
 
+  EXPECT_EQ(result.mouse.pixel_relative_status.code(), lvh::ErrorCode::unsupported_profile);
   expect_ok(result.mouse.relative_status);
   expect_ok(result.mouse.absolute_status);
   expect_ok(result.mouse.degenerate_absolute_status);
