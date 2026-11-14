@@ -158,7 +158,9 @@ The API centers on portable device concepts:
 - `Gamepad`: submits normalized gamepad state and receives output callbacks.
 - `Keyboard`: submits key press/release and UTF-8 text input.
 - `Mouse`: submits relative motion, absolute motion, buttons, vertical scroll,
-  and horizontal scroll.
+  and horizontal scroll. `move_relative_pixels(dx, dy)` requests unaccelerated
+  desktop-pixel offsets instead of device-relative motion. Each offset must fit
+  the signed 16-bit range; unsupported backends return an error.
 - `Touchscreen`, `Trackpad`, and `PenTablet`: expose touch and tablet device
   primitives where the backend supports them.
 - `DeviceProfile`: describes device identity, HID descriptors, report layout,

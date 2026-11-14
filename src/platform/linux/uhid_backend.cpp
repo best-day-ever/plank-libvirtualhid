@@ -1581,6 +1581,8 @@ namespace lvh::detail {
 
           case relative_motion:
             return submit_relative_motion(event);
+          case relative_pixel_motion:
+            return submit_relative_pixel_motion(event);
           case absolute_motion:
             return submit_absolute_motion(event);
           case button:
@@ -1622,6 +1624,21 @@ namespace lvh::detail {
 
       OperationStatus submit_relative_motion(const MouseEvent &event) {
         return submit_relative_delta(event.x, event.y);
+      }
+
+      OperationStatus submit_relative_pixel_motion(const MouseEvent &event) {
+#if defined(__linux__) && defined(LIBVIRTUALHID_HAVE_XTEST)
+        if (absolute_display_ != nullptr) {
+          const auto node = owned_event_node();
+          if (!node.empty() && move_x11_pointer_pixels(absolute_display_, {node}, event.x, event.y)) {
+            return OperationStatus::success();
+          }
+        }
+        return OperationStatus::failure(ErrorCode::backend_unavailable, "owned XInput pixel-relative pointer is unavailable");
+#else
+        (void) event;
+        return OperationStatus::failure(ErrorCode::unsupported_profile, "pixel-relative mouse movement requires Linux X11/XTEST");
+#endif
       }
 
       OperationStatus submit_relative_delta(std::int32_t x, std::int32_t y) {
@@ -2397,6 +2414,8 @@ namespace lvh::detail {
           case relative_motion:
             XTestFakeRelativeMotionEvent(display_, event.x, event.y, CurrentTime);
             break;
+          case relative_pixel_motion:
+            return OperationStatus::failure(ErrorCode::unsupported_profile, "pixel-relative mouse movement requires an owned XInput pointer");
           case absolute_motion:
             submit_absolute_motion(event);
             break;

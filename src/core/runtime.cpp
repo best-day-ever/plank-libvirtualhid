@@ -245,6 +245,10 @@ namespace lvh {
     }
 
     OperationStatus validate_mouse_event(const MouseEvent &event) {
+      if (event.kind == MouseEventKind::relative_pixel_motion &&
+          (event.x < INT16_MIN || event.x > INT16_MAX || event.y < INT16_MIN || event.y > INT16_MAX)) {
+        return OperationStatus::failure(ErrorCode::invalid_argument, "pixel-relative mouse offsets must fit signed 16-bit coordinates");
+      }
       if (event.kind == MouseEventKind::absolute_motion && (event.width <= 0 || event.height <= 0)) {
         return OperationStatus::failure(ErrorCode::invalid_argument, "absolute mouse movement requires positive dimensions");
       }
@@ -634,6 +638,10 @@ namespace lvh {
 
   OperationStatus Mouse::move_relative(std::int32_t delta_x, std::int32_t delta_y) {
     return submit({.kind = MouseEventKind::relative_motion, .x = delta_x, .y = delta_y});
+  }
+
+  OperationStatus Mouse::move_relative_pixels(std::int32_t delta_x, std::int32_t delta_y) {
+    return submit({.kind = MouseEventKind::relative_pixel_motion, .x = delta_x, .y = delta_y});
   }
 
   OperationStatus Mouse::move_absolute(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height) {

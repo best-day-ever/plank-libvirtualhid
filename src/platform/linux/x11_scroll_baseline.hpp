@@ -25,4 +25,14 @@ namespace lvh::detail {
    * @return True when both positioning and scroll baseline requests succeeded.
    */
   bool move_x11_pointer(Display *display, const std::vector<std::string> &event_nodes, int x, int y);
+
+  /**
+   * @brief Move the owned XInput pointer by unaccelerated desktop-pixel offsets.
+   * @param display The same connection used for absolute XTEST motion.
+   * @param event_nodes Exact input-event paths owned by the virtual mouse.
+   * @param delta_x Signed horizontal pixel offset.
+   * @param delta_y Signed vertical pixel offset.
+   * @return True only when owned-device motion and scroll baseline succeeded.
+   */
+  bool move_x11_pointer_pixels(Display *display, const std::vector<std::string> &event_nodes, int delta_x, int delta_y);
 }  // namespace lvh::detail

@@ -82,6 +82,7 @@ namespace lvh::detail::test {
     auto mouse = backend->create_mouse(3, mouse_options);
     result.mouse_create_status = mouse.status;
     if (mouse) {
+      result.mouse_pixel_motion_status = mouse.mouse->submit({.kind = MouseEventKind::relative_pixel_motion, .x = 1, .y = -1});
       result.mouse_close_status = mouse.mouse->close();
       result.mouse_submit_after_close_status = mouse.mouse->submit({.kind = MouseEventKind::relative_motion, .x = 1, .y = 1});
     }

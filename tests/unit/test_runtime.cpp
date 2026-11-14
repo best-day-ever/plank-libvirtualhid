@@ -270,6 +270,27 @@ TEST(RuntimeTest, CreatesSubmitsAndClosesMouse) {
   EXPECT_EQ(created.mouse->move_relative(1, 1).code(), lvh::ErrorCode::device_closed);
 }
 
+TEST(RuntimeTest, PixelRelativeMousePreservesOffsetsAndRejectsOutOfRangeWithoutSubmitting) {
+  auto runtime = lvh::Runtime::create();
+  auto created = runtime->create_mouse();
+  ASSERT_TRUE(created);
+
+  EXPECT_TRUE(created.mouse->move_relative_pixels(17, -23).ok());
+  EXPECT_EQ(created.mouse->last_submitted_event().kind, lvh::MouseEventKind::relative_pixel_motion);
+  EXPECT_EQ(created.mouse->last_submitted_event().x, 17);
+  EXPECT_EQ(created.mouse->last_submitted_event().y, -23);
+  EXPECT_TRUE(created.mouse->move_relative_pixels(INT16_MIN, INT16_MAX).ok());
+  EXPECT_TRUE(created.mouse->move_relative_pixels(0, 0).ok());
+  EXPECT_EQ(created.mouse->submit_count(), 3U);
+
+  for (const auto &[x, y] : std::vector<std::pair<int, int>> {{INT16_MIN - 1, 0}, {INT16_MAX + 1, 0}, {0, INT16_MIN - 1}, {0, INT16_MAX + 1}}) {
+    EXPECT_EQ(created.mouse->move_relative_pixels(x, y).code(), lvh::ErrorCode::invalid_argument);
+  }
+  EXPECT_EQ(created.mouse->submit_count(), 3U);
+  EXPECT_TRUE(created.mouse->close().ok());
+  EXPECT_EQ(created.mouse->move_relative_pixels(1, 1).code(), lvh::ErrorCode::device_closed);
+}
+
 TEST(RuntimeTest, CreatesSubmitsAndClosesTouchDevices) {
   auto runtime = lvh::Runtime::create();
 

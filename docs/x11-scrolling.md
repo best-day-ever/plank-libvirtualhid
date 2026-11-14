@@ -40,3 +40,27 @@ On Rocky 9.7's older libinput/Xorg stack, fractional high-resolution reports may
 still be exposed to GTK only when their legacy detent accumulates. This change
 preserves both reports; it does not convert smooth input to button events or
 promise sub-detent application behavior that the installed X driver lacks.
+
+## Pixel-relative movement
+
+`Mouse::move_relative_pixels(dx, dy)` and
+`MouseEventKind::relative_pixel_motion` move from the pointer's current position
+by desktop pixels, without the acceleration applied to ordinary uinput
+`move_relative` events. This lets a remote host preserve an application's own
+cursor warps during a continuous drag. The operation does not detect application
+grabs, capture the client pointer, or implement a remote protocol; those remain
+the consumer's responsibility.
+
+The Linux uinput backend sends a relative XTEST DeviceMotionNotify request with
+X/Y valuators to the same owned XInput slave used for absolute positioning, then
+retains its scroll baseline. Device-node ownership, checked XCB errors and the
+seven-bit XI1 device-ID bound apply equally to this path. There is no fallback
+to accelerated uinput or the core XTEST pointer: unavailable owned XInput
+delivery returns `backend_unavailable`. The XTEST-only backend and platforms
+without this implementation return `unsupported_profile`.
+
+Signed 16-bit per-event offsets are required. Zero offsets still validate the
+owned delivery path. Ordinary device-relative movement, absolute positioning,
+buttons and scrolling retain their existing behavior. Consumers must qualify
+exact pixel movement and wheel transitions on their actual Xorg/libinput stack
+before promoting a package.

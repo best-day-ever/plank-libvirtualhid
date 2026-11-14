@@ -40,7 +40,7 @@ namespace lvh::detail {
   }  // namespace
 
   /** @brief Resolve the owned pointer and deliver ordered XTEST device events. */
-  static bool submit_pointer(Display *display, const std::vector<std::string> &event_nodes, std::optional<std::pair<int, int>> position) {
+  static bool submit_pointer(Display *display, const std::vector<std::string> &event_nodes, std::optional<std::pair<int, int>> position, bool pixel_relative = false) {
     if (!display || event_nodes.empty()) {
       return false;
     }
@@ -145,7 +145,9 @@ namespace lvh::detail {
       };
       if (position) {
         auto motion = packet;
-        motion.input.detail = 0;  // absolute desktop coordinates on this pointer
+        // XTEST relative device motion uses desktop-pixel offsets without
+        // POINTER_ACCELERATE; ordinary uinput REL_X/REL_Y retains acceleration.
+        motion.input.detail = pixel_relative ? 1 : 0;
         motion.valuators.first_valuator = 0;
         motion.valuators.num_valuators = 2;
         motion.valuators.valuators[0] = position->first;
@@ -168,6 +170,10 @@ namespace lvh::detail {
 
   bool move_x11_pointer(Display *display, const std::vector<std::string> &event_nodes, int x, int y) {
     return submit_pointer(display, event_nodes, std::pair {x, y});
+  }
+
+  bool move_x11_pointer_pixels(Display *display, const std::vector<std::string> &event_nodes, int delta_x, int delta_y) {
+    return submit_pointer(display, event_nodes, std::pair {delta_x, delta_y}, true);
   }
 
 }  // namespace lvh::detail

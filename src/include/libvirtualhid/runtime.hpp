@@ -415,6 +415,19 @@ namespace lvh {
     OperationStatus move_relative(std::int32_t delta_x, std::int32_t delta_y);
 
     /**
+     * @brief Move relative to the current pointer by exact desktop-pixel offsets.
+     *
+     * Unlike `move_relative`, this operation must not apply pointer acceleration.
+     * Linux X11 addresses this mouse's owned XInput slave. Unavailable or
+     * unsupported backends fail rather than substituting accelerated motion.
+     *
+     * @param delta_x Horizontal pixel offset, in the signed 16-bit range.
+     * @param delta_y Vertical pixel offset, in the signed 16-bit range.
+     * @return Submit status, including an explicit unsupported/unavailable error.
+     */
+    OperationStatus move_relative_pixels(std::int32_t delta_x, std::int32_t delta_y);
+
+    /**
      * @brief Submit absolute pointer movement.
      *
      * @param x Absolute X coordinate in the supplied coordinate space.

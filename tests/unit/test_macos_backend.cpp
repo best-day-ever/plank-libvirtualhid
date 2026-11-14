@@ -125,6 +125,7 @@ TEST_F(MacosBackendTest, ReportsCapabilitiesAndUnsupportedDevices) {
   EXPECT_EQ(result.keyboard_invalid_profile_status.code(), lvh::ErrorCode::unsupported_profile);
 
   ASSERT_TRUE(result.mouse_create_status.ok()) << result.mouse_create_status.message();
+  EXPECT_EQ(result.mouse_pixel_motion_status.code(), lvh::ErrorCode::unsupported_profile);
   ASSERT_TRUE(result.mouse_close_status.ok()) << result.mouse_close_status.message();
   EXPECT_EQ(result.mouse_submit_after_close_status.code(), lvh::ErrorCode::device_closed);
   EXPECT_EQ(result.mouse_invalid_profile_status.code(), lvh::ErrorCode::unsupported_profile);

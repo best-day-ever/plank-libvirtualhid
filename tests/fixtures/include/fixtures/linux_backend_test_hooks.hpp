@@ -72,6 +72,7 @@ namespace lvh::detail::test {
     std::size_t xtest_motion_count = 0;
 
     std::size_t owned_motion_count = 0;  ///< Motions delivered on the owned XInput pointer.
+    std::vector<std::pair<int, int>> pixel_motion_offsets;  ///< Pixel deltas delivered on the owned XInput pointer.
 
     /**
      * @brief Absolute viewport coordinates sent through XTest.
@@ -809,6 +810,13 @@ namespace lvh::detail::test {
   LinuxMouseTransportResult linux_uinput_mouse_transport_sequence(bool owned = false);
 
   /**
+   * @brief Exercise pixel-relative dispatch without evdev or core XTEST fallback.
+   * @param owned Whether addressing the owned XInput pointer succeeds.
+   * @return Dispatch status, pixel deltas and backend side effects.
+   */
+  LinuxMouseTransportResult linux_uinput_pixel_mouse_transport_sequence(bool owned);
+
+  /**
    * @brief Place and release a contact through a pipe-backed uinput touchscreen.
    *
    * @param contact Touch contact to place.
@@ -1263,6 +1271,12 @@ namespace lvh::detail::test {
    * @return Submit status.
    */
   OperationStatus linux_xtest_mouse_submit_success();
+
+  /**
+   * @brief Attempt pixel-relative motion through the core-only XTEST fallback.
+   * @return Unsupported status, or unavailable when XTEST cannot be opened.
+   */
+  OperationStatus linux_xtest_pixel_mouse_submit();
 
   /**
    * @brief Submit mouse input after closing the XTest fallback.
